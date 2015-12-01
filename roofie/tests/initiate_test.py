@@ -9,7 +9,7 @@ from rootpy.io import File
 
 from ROOT import TCanvas, TLegend, TFile, TDirectoryFile, TPad
 
-from roofi.figure import Figure, Styles
+from roofie.figure import Figure, Styles
 
 import ROOT
 
@@ -351,14 +351,14 @@ class Test_import_from_canvas(unittest.TestCase):
         fig.add_plottable(h1, legend_title="hist 1")
         self.canvas = fig.draw_to_canvas()
 
-    def test_import_roofi_canvas(self):
+    def test_import_roofie_canvas(self):
         fig = Figure()
         fig.import_plottables_from_canvas(self.canvas)
         self.assertEqual(len(fig._plottables), 1)
         self.assertIsInstance(fig._plottables[0], dict)
         fig.draw_to_canvas()
 
-    def test_import_non_roofi_canvas(self):
+    def test_import_non_roofie_canvas(self):
         fig = Figure()
         c = Canvas()
         self.assertRaises(ValueError, fig.import_plottables_from_canvas, c)

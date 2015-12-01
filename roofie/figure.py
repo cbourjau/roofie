@@ -58,7 +58,7 @@ class Styles(object):
 
 
 logging.basicConfig(level=logging.DEBUG)
-log = log["/roofi"]
+log = log["/roofie"]
 
 
 def gen_random_name():
@@ -190,21 +190,21 @@ class Figure(object):
 
     def import_plottables_from_canvas(self, canvas):
         """
-        Import plottables from a canvas which was previously created with roofi
+        Import plottables from a canvas which was previously created with roofie
 
         Parameters
         ----------
         canvas : Canvas
-            A canvas which was created with roofi.
+            A canvas which was created with roofie.
 
         Raises
         ------
         ValueError :
-            The given canvas did not have the internal format as expected from roofi canvases
+            The given canvas did not have the internal format as expected from roofie canvases
         """
         pad = canvas.FindObject('plot')
         if pad == None:  # "is None" does not work since TObject is not None
-            raise ValueError("Cannot import canvas, since it is not in roofi format.")
+            raise ValueError("Cannot import canvas, since it is not in roofie format.")
         try:
             legend = [p for p in pad.GetListOfPrimitives() if isinstance(p, ROOT.TLegend)][0]
         except IndexError:
