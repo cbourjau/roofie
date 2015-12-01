@@ -1,0 +1,41 @@
+\documentclass[xcolor=dvipsnames]{beamer}
+
+\usepackage{graphicx,subfigure,url, tikz}
+
+% example themes
+\usetheme{Frankfurt}
+\usecolortheme{seahorse}
+\usecolortheme{rose}
+
+% put page numbers
+% \setbeamertemplate{footline}[frame number]{}
+% remove navigation symbols
+% \setbeamertemplate{navigation symbols}{}
+
+\title{Test Presentation}
+\begin{document}
+
+\frame[plain]{\titlepage}
+
+\begin{frame}[plain]
+  \includegraphics[]{./test_styles/fig_pres_full.pdf}
+\end{frame}
+% \begin{frame}[plain]
+%   \include{fig}
+% \end{frame}
+
+\begin{frame}
+  \includegraphics[scale=1]{./test_styles/fig_pres_half.pdf}
+  \includegraphics[]{./test_styles/fig_pres_half.pdf}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Figures with exponential on yaxis}
+  \includegraphics[]{./test_styles/fig_pres_half_exp.pdf}
+\end{frame}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

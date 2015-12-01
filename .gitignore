@@ -1,0 +1,12 @@
+*.aux
+*.el
+*.log
+*.nav
+*.out
+*.pdf
+*.pyc
+*.root
+*.snm
+*.toc
+
+*/__pycache__/*
