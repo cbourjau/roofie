@@ -1,6 +1,6 @@
 from setuptools import setup
 
-install_requires = ['ROOT', 'rootpy']
+install_requires = ['rootpy']
 tests_require = ['nose']
 
 setup(
