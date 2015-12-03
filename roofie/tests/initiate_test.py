@@ -4,10 +4,10 @@ import shutil
 
 from rootpy import asrootpy
 from rootpy.plotting import Hist1D, Graph, Canvas
-from rootpy.interactive import wait
+
 from rootpy.io import File
 
-from ROOT import TCanvas, TLegend, TFile, TDirectoryFile, TPad
+from ROOT import TCanvas, TLegend, TFile, TDirectoryFile, TPad, TF1
 
 from roofie.figure import Figure, Styles
 
@@ -58,7 +58,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         f = Figure()
         f.add_plottable(gr)
 
-    def test_draw_to_canvas_no_legend(self):
+    def test_no_legend(self):
         f = Figure()
         h = Hist1D(10, 0, 10)
         h.Fill(5)
@@ -67,7 +67,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         self.assertIsInstance(c, TCanvas)
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
-    def test_draw_to_canvas_legend(self):
+    def test_with_legend(self):
         f = Figure()
         h = Hist1D(10, 0, 10)
         h.Fill(5)
@@ -75,7 +75,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         c = f.draw_to_canvas()
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
-    def test_draw_to_canvas_several_hists(self):
+    def test_several_hists(self):
         f = Figure()
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
@@ -86,19 +86,24 @@ class Test_draw_to_canvas(unittest.TestCase):
         c = f.draw_to_canvas()
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
-    def test_draw_to_canvas_hists_and_graphs(self):
-        f = Figure()
+    def test_hists_and_graphs_and_function(self):
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
         h2 = Hist1D(10, 0, 10)
         h2.Fill(2)
+
         gr = Graph()
         gr.SetPoint(0, 0, 0)
         gr.SetPoint(1, 1, 1)
         gr.SetPoint(2, 7, 2)
-        f.add_plottable(h1, "hist")
-        f.add_plottable(gr, "graph")
-        c = f.draw_to_canvas()
+
+        f1 = TF1("f", "sin(x)/x", 0, 10)
+
+        fig = Figure()
+        fig.add_plottable(h1, "hist")
+        fig.add_plottable(gr, "graph")
+        fig.add_plottable(f1, "some function")
+        c = fig.draw_to_canvas()
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
     def test_draw_histograms_with_incompatible_binning(self):
@@ -113,7 +118,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         h3 = Hist1D(13, 0, 10)
         h3.Fill(5, 12)
         f.add_plottable(h3)
-        c = f.draw_to_canvas()
+        f.draw_to_canvas()
 
 
 class Test_plot_options(unittest.TestCase):
@@ -135,8 +140,7 @@ class Test_plot_options(unittest.TestCase):
         h1 = Hist1D(10, 0, 10,)
         h1.Fill(5)
         f.add_plottable(h1)
-        c = f.draw_to_canvas()
-        # wait()
+        f.draw_to_canvas()
 
     def test_draw_half_width(self):
         ROOT.gROOT.SetBatch(False)
@@ -165,7 +169,6 @@ class Test_plot_options(unittest.TestCase):
         # self.assertEqual(plot_pad.GetListOfPrimitives()[-1].GetXaxis().GetXmax(), 5)
         self.assertEqual(plot_pad.GetListOfPrimitives()[-1].GetMinimum(), -5)
         self.assertEqual(plot_pad.GetListOfPrimitives()[-1].GetMaximum(), 5)
-
 
 
 class Test_legend_options(unittest.TestCase):
@@ -259,7 +262,8 @@ class Test_write_to_pdf_file(unittest.TestCase):
 
     def test_write_to_disc_without_folder(self):
         name = "myfig.pdf"
-        # path = os.path.dirname(os.path.realpath(__file__))
+        path = os.path.dirname(os.path.realpath(__file__)) + '/fig_folder'
+        os.chdir(path)
         # first, delete old verion of that folder
         try:
             os.remove(name)
