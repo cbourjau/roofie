@@ -2,7 +2,6 @@ import os
 import unittest
 import shutil
 
-from rootpy import asrootpy
 from rootpy.plotting import Hist1D, Graph, Canvas
 
 from rootpy.io import File
@@ -14,6 +13,9 @@ from roofie.figure import Figure, Styles
 import ROOT
 
 test_dir = os.path.dirname(os.path.abspath(__file__))
+
+# for debuging, it might be nice to see the canvas in 'real time' while using pdb
+# set `ROOT.gROOT.SetBatch(False)` for that purpose
 
 
 class Test_Figure(unittest.TestCase):
@@ -107,7 +109,6 @@ class Test_draw_to_canvas(unittest.TestCase):
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
     def test_draw_histograms_with_incompatible_binning(self):
-        ROOT.gROOT.SetBatch(False)
         f = Figure()
         h1 = Hist1D(3, 0, 10)
         h1.Fill(1, 3)
@@ -133,7 +134,6 @@ class Test_plot_options(unittest.TestCase):
         self.assertEqual(c.FindObject("plot").GetLogy(), 1)
 
     def test_axis_labels_dont_overlap(self):
-        # ROOT.gROOT.SetBatch(False)
         f = Figure()
         f.xtitle = 'N_{ch}#times#eta / #phi'
         f.ytitle = '1/N_{ch}^{supscr}#pi^{#pm}/#Xi'
@@ -143,7 +143,6 @@ class Test_plot_options(unittest.TestCase):
         f.draw_to_canvas()
 
     def test_draw_half_width(self):
-        ROOT.gROOT.SetBatch(False)
         f = Figure()
         f.style = Styles.Presentation_half
         f.xtitle = 'N_{ch}#times#eta / #phi'
@@ -154,7 +153,6 @@ class Test_plot_options(unittest.TestCase):
         f.draw_to_canvas()
 
     def test_SetRangeUser(self):
-        ROOT.gROOT.SetBatch(False)
         f = Figure()
         h1 = Hist1D(10, 0, 10)
         h1.Fill(1)

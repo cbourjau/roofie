@@ -245,13 +245,11 @@ class Figure(object):
         for pdic in self._plottables:
             try:
                 limits = get_limits(pdic['p'], logx=self.plot.logx, logy=self.plot.logy)
-                print limits
                 # Beware: Python 2 evaluates min/max of None in an undefined way with no error! Wow...
                 xmin = min([xmin, limits[0]]) if xmin is not None else limits[0]
                 xmax = max([xmax, limits[1]]) if xmax is not None else limits[1]
                 ymin = min([ymin, limits[2]]) if ymin is not None else limits[2]
                 ymax = max([ymax, limits[3]]) if ymax is not None else limits[3]
-                print xmin, xmax, ymin, ymax
             except TypeError:
                 # some plottables do not work with this rootpy function (eg. graph without points, tf1)
                 # TODO: should be fixed upstream
