@@ -261,6 +261,7 @@ class Test_write_to_pdf_file(unittest.TestCase):
     def test_write_to_disc_without_folder(self):
         name = "myfig.pdf"
         path = os.path.dirname(os.path.realpath(__file__)) + '/fig_folder'
+        old_cwd = os.getcwd()
         os.chdir(path)
         # first, delete old verion of that folder
         try:
@@ -269,6 +270,8 @@ class Test_write_to_pdf_file(unittest.TestCase):
             pass
         self.fig.save_to_file(name=name, path='./')
         self.assertTrue(os.path.exists('./' + name))
+        # change back cwd, ugly!
+        os.chdir(old_cwd)
 
 
 class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
