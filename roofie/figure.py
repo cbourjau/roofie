@@ -4,7 +4,7 @@ import logging
 import os
 
 from rootpy import asrootpy, log
-from rootpy.plotting import Legend, Canvas, Pad, Hist1D
+from rootpy.plotting import Legend, Canvas, Pad, Graph
 from rootpy.plotting.utils import get_limits
 
 import ROOT
@@ -203,7 +203,7 @@ class Figure(object):
             The given canvas did not have the internal format as expected from roofie canvases
         """
         pad = canvas.FindObject('plot')
-        if pad == None:  # "is None" does not work since TObject is not None
+        if pad == None:  # "is None" does not work since TObject is not None, but equal to None...
             raise ValueError("Cannot import canvas, since it is not in roofie format.")
         try:
             legend = [p for p in pad.GetListOfPrimitives() if isinstance(p, ROOT.TLegend)][0]
@@ -211,7 +211,9 @@ class Figure(object):
             legend_entries = []
         else:
             legend_entries = [e for e in legend.GetListOfPrimitives()]
-        plottables = [{'p': asrootpy(p)} for p in pad.GetListOfPrimitives() if is_plottable(p)]
+        # load the plottables but ignore the frame
+        plottables = [{'p': asrootpy(p)} for p in pad.GetListOfPrimitives() if (is_plottable(p) and
+                                                                                p.GetName() != "__frame")]
         for pdict in plottables:
             for legend_entry in legend_entries:
                 if pdict['p'] == legend_entry.GetObject():
@@ -270,10 +272,26 @@ class Figure(object):
         colors = get_color_generator(self.plot.palette, self.plot.palette_ncolors)
 
         # draw an empty histogram within the given ranges;
-        range_hist = Hist1D(100, xmin, xmax)
-        range_hist.SetMinimum(ymin)
-        range_hist.SetMaximum(ymax)
-        is_first = False
+        frame = Graph()
+        frame.SetName("__frame")
+        # add a silly point in order to have root draw this frame...
+        frame.SetPoint(0, 0, 0)
+        frame.GetXaxis().SetLimits(xmin, xmax)
+        frame.GetYaxis().SetLimits(ymin, ymax)
+        frame.SetMinimum(ymin)
+        frame.SetMaximum(ymax)
+
+        frame.GetXaxis().SetTitle(self.xtitle)
+        frame.GetYaxis().SetTitle(self.ytitle)
+
+        xtick_length = frame.GetXaxis().GetTickLength()
+        ytick_length = frame.GetYaxis().GetTickLength()
+        self._theme_plottable(frame)
+        # Draw this frame: 'A' should draw the axis, but does not work if nothing else is drawn.
+        # L would draw a line between the points but is seems to do nothing if only one point is present
+        # P would also draw that silly point but we don't want that!
+        frame.Draw("AL")
+
         for i, pdic in enumerate(self._plottables):
             obj = pdic['p']
             if pdic.get('markerstyle', None):
@@ -292,16 +310,6 @@ class Figure(object):
             xaxis = obj.GetXaxis()
             yaxis = obj.GetYaxis()
 
-            # set the y axis here
-            obj.SetMinimum(ymin)
-            obj.SetMaximum(ymax)
-
-            xaxis.SetTitle(self.xtitle)
-            yaxis.SetTitle(self.ytitle)
-
-            xtick_length = xaxis.GetTickLength()
-            ytick_length = yaxis.GetTickLength()
-
             # Set the title to the given title:
             obj.title = self.title
 
@@ -312,28 +320,20 @@ class Figure(object):
                 # SetLimit on a TH1 is simply messing up the lables of the axis to fuck over the user!
                 xaxis.SetLimits(xmin, xmax)
                 yaxis.SetLimits(ymin, ymax)  # for unbinned data
-                if is_first:
-                    drawoption = 'APL'  # root think axis are over rated for graphs...
-                else:
-                    drawoption = 'PLsame'
+                # 'P' plots the current marker, 'L' would connect the dots with a simple line
+                # see: https://root.cern.ch/doc/master/classTGraphPainter.html for more draw options
+                drawoption = 'Psame'
             elif isinstance(obj, ROOT.TH1):
                 obj.SetStats(0)
                 xaxis.SetRangeUser(xmin, xmax)
                 yaxis.SetRangeUser(ymin, ymax)
-                if is_first:
-                    drawoption = ''
-                else:
-                    drawoption = 'same'
+                drawoption = 'same'
             elif isinstance(obj, ROOT.TF1):
                 # xaxis.SetLimits(xmin, xmax)
                 # yaxis.SetLimits(ymin, ymax)  # for unbinned data
-                if is_first:
-                    drawoption = ''
-                else:
-                    drawoption = 'same'
+                drawoption = 'same'
             else:
                 raise TypeError("Un-plottable type given.")
-            is_first = False
             obj.Draw(drawoption)
         pad_plot.SetTicks()
         pad_plot.SetLogx(self.plot.logx)
