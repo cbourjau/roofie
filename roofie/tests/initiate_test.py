@@ -88,6 +88,16 @@ class Test_draw_to_canvas(unittest.TestCase):
         c = f.draw_to_canvas()
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
+    def test_only_graph(self):
+        # This one currently creates a blank canvas but no error... Root...
+        gr = Graph()
+        gr.SetPoint(0, 0, 0)
+        gr.SetPoint(1, 1, 1)
+        gr.SetPoint(2, 7, 2)
+        fig = Figure()
+        fig.add_plottable(gr)
+        fig.draw_to_canvas()
+
     def test_hists_and_graphs_and_function(self):
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
