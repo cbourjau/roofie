@@ -39,10 +39,10 @@ class Beamerdoc(object):
         \begin{{document}}
 
         \frame[plain]{{\titlepage}}
+        \frame[plain]{\tableofcontents}
 
-        \tableofcontents
         """)
-        self.postamble = r"""\end{document}"""
+        self.postamble = r"""\end{document}\n"""
 
     class Section(object):
         def __init__(self, document, sec_title):
