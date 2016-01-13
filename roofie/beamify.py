@@ -8,6 +8,7 @@ This is at the expense of customizability of the folder structure
 
 import os
 import random
+import re
 import string
 import subprocess
 import textwrap
@@ -98,11 +99,13 @@ class Beamerdoc(object):
                 Paths to the files written to disc, relative to where the tex file will be
             """
             paths = []
+            # make a save folder name out of the section title
+            t = re.compile("[a-zA-Z0-9.,_-]")
+            fig_folder_safe = 'figures/' + "".join([ch for ch in self.title if t.match(ch)]) + "/"
             for fig in self.figures:
                 rand_name = ''.join(random.choice(string.ascii_letters) for _ in range(5)) + ".pdf"
-                fig_path = 'figures/' + self.title.replace(" ", "_") + "/"
-                fig.save_to_file(self.document.output_dir + fig_path, rand_name)
-                paths.append("./" + fig_path + rand_name)
+                fig.save_to_file(self.document.output_dir + fig_folder_safe, rand_name)
+                paths.append("./" + fig_folder_safe + rand_name)
             return paths
 
     def add_section(self, sec_title):
@@ -131,9 +134,11 @@ class Beamerdoc(object):
             f.write(self._create_latex_and_save_figures())
 
         cmd = ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(output_file_name)]
-        subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
-        subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
-
+        try:
+            out = subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+            out = subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+        except subprocess.CalledProcessError:
+            print "An error occured while compiling the latex document. See 'summary.log' for details"
 
 # from roofie.figure import Figure
 # from rootpy.plotting import Hist1D
