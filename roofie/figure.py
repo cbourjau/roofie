@@ -182,7 +182,9 @@ class Figure(object):
         legend_title : string
             Title for this plottable as shown in the legend
         """
-        self._plottables.append({'p': asrootpy(obj.Clone(gen_random_name())),
+        h = asrootpy(obj.Clone(gen_random_name()))
+        h.SetDirectory(0)  # make sure that the hist is not associated with a file anymore!
+        self._plottables.append({'p': h,
                                  'legend_title': legend_title,
                                  'markerstyle': markerstyle,
                                  'color': color,
