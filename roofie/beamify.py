@@ -39,7 +39,7 @@ class Beamerdoc(object):
         \begin{{document}}
 
         \frame[plain]{{\titlepage}}
-        \frame[plain]{\tableofcontents}
+        \frame[plain]{{\tableofcontents}}
 
         """)
         self.postamble = r"""\end{document}\n"""
@@ -80,7 +80,7 @@ class Beamerdoc(object):
                 Latex code for this section with linkes to the figures already included
             """
             fig_paths = self._write_figures_to_disc()
-            section_body = '\section*{{{}}}'.format(self.title)
+            section_body = '\section{{{}}}'.format(self.title)
             figs_per_frame = 4
             for frame_num in xrange(0, len(fig_paths), figs_per_frame):
                 ig_cmds = ['' for i in range(figs_per_frame)]
