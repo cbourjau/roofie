@@ -44,7 +44,7 @@ class Beamerdoc(object):
         \begin{{document}}
 
         \frame[plain]{{\titlepage}}
-        \frame[plain]{{\tableofcontents}}
+        \frame{{\tableofcontents}}
 
         """)
         self.postamble = r"""\end{document}\n"""
@@ -56,7 +56,7 @@ class Beamerdoc(object):
             self.figures = []
             self.frames = []
             self.frame_template = textwrap.dedent(r"""
-            \begin{{frame}}[plain]
+            \begin{{frame}}
             \frametitle{{{title}}}
             \begin{{columns}}
             \begin{{column}}{{.45\textwidth}}
