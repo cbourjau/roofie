@@ -14,12 +14,17 @@ import subprocess
 import textwrap
 
 
+def _safe_folder_name(unsafe):
+    t = re.compile("[a-zA-Z0-9.,_-]")
+    return "".join([ch for ch in unsafe if t.match(ch)])
+
+
 class Beamerdoc(object):
-    def __init__(self):
-        self.title = ''
-        self.author = ''
+    def __init__(self, author, title):
+        self.title = title
+        self.author = author
         self.sections = []
-        self.output_dir = './summary_slides/'
+        self.output_dir = './{}/'.format(_safe_folder_name(self.title))
         self.preamble = textwrap.dedent(r"""
         \documentclass[xcolor=dvipsnames]{{beamer}}
 
@@ -99,9 +104,7 @@ class Beamerdoc(object):
                 Paths to the files written to disc, relative to where the tex file will be
             """
             paths = []
-            # make a save folder name out of the section title
-            t = re.compile("[a-zA-Z0-9.,_-]")
-            fig_folder_safe = 'figures/' + "".join([ch for ch in self.title if t.match(ch)]) + "/"
+            fig_folder_safe = 'figures/' + _safe_folder_name(self.title) + "/"
             for fig in self.figures:
                 rand_name = ''.join(random.choice(string.ascii_letters) for _ in range(5)) + ".pdf"
                 fig.save_to_file(self.document.output_dir + fig_folder_safe, rand_name)
@@ -134,9 +137,10 @@ class Beamerdoc(object):
             f.write(self._create_latex_and_save_figures())
 
         cmd = ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(output_file_name)]
+        subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
         try:
-            out = subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
-            out = subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+            # only cache errors for the second compiling try, since the first  might complain about old stuff
+            subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
         except subprocess.CalledProcessError:
             print "An error occured while compiling the latex document. See 'summary.log' for details"
 
