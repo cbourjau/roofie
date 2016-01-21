@@ -31,10 +31,10 @@ class Beamerdoc(object):
         \usepackage{{graphicx,subfigure,url, tikz}}
 
         % example themes
-        \usetheme[nat,style=simple]{{Frederiksberg}}
+        % \usetheme[nat,style=simple]{{Frederiksberg}}
 
         % put page numbers
-        \setbeamertemplate{{footline}}[frame number]{{}}
+        % \setbeamertemplate{{footline}}[frame number]{{}}
         % remove navigation symbols
         \setbeamertemplate{{navigation symbols}}{{}}
         \author{{{author}}}
