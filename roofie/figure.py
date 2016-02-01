@@ -136,6 +136,8 @@ class Figure(object):
     class Plot(object):
         logx = False
         logy = False
+        gridx = False
+        gridy = False
         palette = 'husl'
         palette_ncolors = 10
         xmin, xmax, ymin, ymax = None, None, None, None
@@ -341,6 +343,8 @@ class Figure(object):
         pad_plot.SetTicks()
         pad_plot.SetLogx(self.plot.logx)
         pad_plot.SetLogy(self.plot.logy)
+        pad_plot.SetGridx(self.plot.gridx)
+        pad_plot.SetGridy(self.plot.gridy)
 
         # do we have legend titles?
         if any([pdic['legend_title'] for pdic in self._plottables]):
