@@ -443,7 +443,6 @@ class Figure(object):
         # this is not compatible with windows, I guess!
         if path.endswith('/'):
             path = path[:-1]
-        c = self.draw_to_canvas()
         try:
             os.makedirs(path)
         except OSError:
@@ -458,9 +457,7 @@ class Figure(object):
         ROOT.gStyle.SetPaperSize(self.style.canvasWidth / self.style.pt_per_cm,
                                  self.style.canvasHeight / self.style.pt_per_cm,)
         c = self.draw_to_canvas()
-        pdf = ROOT.TPDF("{}/{}".format(path, name))
-        c.Draw()
-        pdf.Close()
+        c.Print("{}/{}".format(path, name))
 
         # reset the page size
         # ROOT.gStyle.SetPaperSize(paper_width, paper_height)
