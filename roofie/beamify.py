@@ -33,8 +33,8 @@ class Beamerdoc(object):
         % example themes
         % \usetheme[nat,style=simple]{{Frederiksberg}}
 
-        % put page numbers
-        % \setbeamertemplate{{footline}}[frame number]{{}}
+        % put page numbers into the footer
+        \setbeamertemplate{{footline}}[frame number]{{}}
         % remove navigation symbols
         \setbeamertemplate{{navigation symbols}}{{}}
         \author{{{author}}}
