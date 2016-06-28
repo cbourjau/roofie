@@ -1,1 +1,1 @@
-from roofie.figure import Figure, Styles
+from .figure import Figure, Styles
