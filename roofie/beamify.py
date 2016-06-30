@@ -13,6 +13,10 @@ import string
 import subprocess
 import textwrap
 
+from .figure import Figure
+
+import ROOT.TCanvas
+
 
 def _safe_folder_name(unsafe):
     t = re.compile("[a-zA-Z0-9.,_-]")
@@ -104,11 +108,22 @@ class Beamerdoc(object):
                 Paths to the files written to disc, relative to where the tex file will be
             """
             paths = []
-            fig_folder_safe = 'figures/' + _safe_folder_name(self.title) + "/"
+            fig_folder_safe = os.path.join('figures/', _safe_folder_name(self.title))
             for fig in self.figures:
                 rand_name = ''.join(random.choice(string.ascii_letters) for _ in range(5)) + ".pdf"
-                fig.save_to_file(self.document.output_dir + fig_folder_safe, rand_name)
-                paths.append("./" + fig_folder_safe + rand_name)
+                fig_path_from_latex_root = os.path.join(self.document.output_dir, fig_folder_safe)
+                if isinstance(fig, Figure):
+                    fig.save_to_file(fig_path_from_latex_root, rand_name)
+                if isinstance(fig, ROOT.TCanvas):
+                    # make sure the folder exists
+                    try:
+                        os.makedirs(fig_path_from_latex_root)
+                    except OSError:
+                        pass
+                    # root needs to draw the canvas first otherwise it crashes, sometimes...
+                    fig.Draw()
+                    fig.SaveAs(os.path.join(fig_path_from_latex_root, rand_name))
+                paths.append(os.path.join("./", fig_folder_safe, rand_name))
             return paths
 
     def add_section(self, sec_title):

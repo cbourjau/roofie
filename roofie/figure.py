@@ -461,8 +461,7 @@ class Figure(object):
             raise NotImplementedError("Only PDF export is implemented at the moment")
         # strip of tailing / if any
         # this is not compatible with windows, I guess!
-        if path.endswith('/'):
-            path = path[:-1]
+        path = path.rstrip('/')
         try:
             os.makedirs(path)
         except OSError:

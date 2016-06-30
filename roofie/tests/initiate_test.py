@@ -385,3 +385,28 @@ class Test_import_from_canvas(unittest.TestCase):
         fig = Figure()
         c = Canvas()
         self.assertRaises(ValueError, fig.import_plottables_from_canvas, c)
+
+
+class Test_beamify_add_canvas(unittest.TestCase):
+    def test_overwrite_canvas_before_finalize(self):
+        def add_canvas(sec):
+            """
+            Add a canvas to the section. The canvas and histogram
+            go out of scope at the end of the function.
+            """
+            c = Canvas()
+            h1 = Hist1D(10, 0, 10)
+            h1.Fill(5)
+            h1.Draw()
+            sec.add_figure(c)
+        latexdoc = Beamerdoc("Christian Bourjau", "Test plots")
+        sec = latexdoc.add_section("TCanvas")
+        add_canvas(sec)
+        sec = latexdoc.add_section("TCanvas and roofie")
+        add_canvas(sec)
+        fig = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        fig.add_plottable(h1, legend_title="hist 1")
+        sec.add_figure(fig)
+        latexdoc.finalize_document("test_add_canvas.tex")
