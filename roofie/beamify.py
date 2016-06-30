@@ -123,11 +123,10 @@ class Beamerdoc(object):
         body += self.postamble
         return body
 
-    def finalize_document(self):
+    def finalize_document(self, output_file_name="summary.tex"):
         """
         Assamble the latex document and run the compile command
         """
-        output_file_name = "summary.tex"
         try:
             os.makedirs(self.output_dir)
         except OSError:

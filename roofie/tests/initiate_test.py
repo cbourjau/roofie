@@ -8,7 +8,7 @@ from rootpy.io import File
 
 from ROOT import TCanvas, TLegend, TFile, TDirectoryFile, TPad, TF1
 
-from roofie.figure import Figure, Styles
+from roofie import Figure, Styles, Beamerdoc
 
 import ROOT
 
@@ -360,11 +360,11 @@ class Test_write_to_tex_file(unittest.TestCase):
 
 class Test_import_from_canvas(unittest.TestCase):
     def setUp(self):
-        fig = Figure()
+        self.orig_fig = Figure()
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
-        fig.add_plottable(h1, legend_title="hist 1")
-        self.canvas = fig.draw_to_canvas()
+        self.orig_fig.add_plottable(h1, legend_title="hist 1")
+        self.canvas = self.orig_fig.draw_to_canvas()
 
     def test_import_roofie_canvas(self):
         fig = Figure()
@@ -372,6 +372,13 @@ class Test_import_from_canvas(unittest.TestCase):
         self.assertEqual(len(fig._plottables), 1)
         self.assertIsInstance(fig._plottables[0], dict)
         fig.draw_to_canvas()
+
+        # make a pdf for visual comparison
+        latexdoc = Beamerdoc("Christian Bourjau", "Test plots")
+        sec = latexdoc.add_section("Import from canvas (same content, maybe different positions")
+        sec.add_figure(self.orig_fig)
+        sec.add_figure(fig)
+        latexdoc.finalize_document("test_imports.tex")
 
     def test_import_non_roofie_canvas(self):
         fig = Figure()

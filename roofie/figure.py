@@ -221,12 +221,13 @@ class Figure(object):
         else:
             legend_entries = [e for e in legend.GetListOfPrimitives()]
         # load the plottables but ignore the frame
-        plottables = [{'p': asrootpy(p)} for p in pad.GetListOfPrimitives() if (is_plottable(p) and
-                                                                                p.GetName() != "__frame")]
-        for pdict in plottables:
-            for legend_entry in legend_entries:
-                if pdict['p'] == legend_entry.GetObject():
-                    pdict['legend_title'] = legend_entry.GetLabel()
+        plottables = []
+        for p in pad.GetListOfPrimitives():
+            if (is_plottable(p) and p.GetName() != "__frame"):
+                plottables.append({'p': asrootpy(p.Clone(gen_random_name()))})
+                for legend_entry in legend_entries:
+                    if p == legend_entry.GetObject():
+                        plottables[-1]['legend_title'] = legend_entry.GetLabel()
         self._plottables += plottables
 
     def draw_to_canvas(self):
@@ -276,7 +277,7 @@ class Figure(object):
             ymin = self.plot.ymin
 
         if not all([val is not None for val in [xmin, xmax, ymin, ymax]]):
-            raise TypeError("unable to determine plot axes ranges from the given plottagles")
+            raise TypeError("unable to determine plot axes ranges from the given plottables")
 
         colors = get_color_generator(self.plot.palette, self.plot.palette_ncolors)
 
@@ -362,7 +363,7 @@ class Figure(object):
         pad_plot.SetGridy(self.plot.gridy)
 
         # do we have legend titles?
-        if any([pdic['legend_title'] for pdic in self._plottables]):
+        if any([pdic.get('legend_title') for pdic in self._plottables]):
             leg = self._create_legend()
             longest_label = 0
             for pdic in self._plottables:
