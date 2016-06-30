@@ -223,14 +223,19 @@ class Figure(object):
         # load the plottables but ignore the frame
         plottables = []
         for p in pad.GetListOfPrimitives():
-            if (is_plottable(p) and p.GetName() != "__frame"):
-                plottables.append({'p': asrootpy(p.Clone(gen_random_name()))})
-                for legend_entry in legend_entries:
-                    if p == legend_entry.GetObject():
-                        plottables[-1]['legend_title'] = legend_entry.GetLabel()
+            if is_plottable(p):
+                if p.GetName() != "__frame":
+                    plottables.append({'p': asrootpy(p.Clone(gen_random_name()))})
+                    for legend_entry in legend_entries:
+                        if p == legend_entry.GetObject():
+                            plottables[-1]['legend_title'] = legend_entry.GetLabel()
+                else:
+                    self.xtitle = p.GetXaxis().GetTitle()
+                    self.ytitle = p.GetYaxis().GetTitle()
         # set legend title if any
         if legend.GetHeader():
             self.legend.title = legend.GetHeader()
+
 
         self._plottables += plottables
 
