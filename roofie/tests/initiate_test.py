@@ -364,6 +364,7 @@ class Test_import_from_canvas(unittest.TestCase):
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
         self.orig_fig.add_plottable(h1, legend_title="hist 1")
+        self.orig_fig.legend.title = "Legend title"
         self.canvas = self.orig_fig.draw_to_canvas()
 
     def test_import_roofie_canvas(self):

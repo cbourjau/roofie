@@ -228,6 +228,10 @@ class Figure(object):
                 for legend_entry in legend_entries:
                     if p == legend_entry.GetObject():
                         plottables[-1]['legend_title'] = legend_entry.GetLabel()
+        # set legend title if any
+        if legend.GetHeader():
+            self.legend.title = legend.GetHeader()
+
         self._plottables += plottables
 
     def draw_to_canvas(self):
