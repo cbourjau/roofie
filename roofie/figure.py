@@ -179,7 +179,7 @@ class Figure(object):
             # marker size 1 == 8 px, and never scales with canvas...
             obj.SetMarkerSize(self.style.markerSizepx / 8.0)
 
-    def add_plottable(self, obj, legend_title='', markerstyle='circle', color='black', use_as_frame=None):
+    def add_plottable(self, obj, legend_title='', markerstyle='circle', color=None, use_as_frame=None):
         """
         Add a plottable objet to this figure. This function performs a
         copy of the passed object and assigns it a random name. Once
