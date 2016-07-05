@@ -179,7 +179,7 @@ class Figure(object):
             # marker size 1 == 8 px, and never scales with canvas...
             obj.SetMarkerSize(self.style.markerSizepx / 8.0)
 
-    def add_plottable(self, obj, legend_title='', markerstyle=None, color=None, use_as_frame=None):
+    def add_plottable(self, obj, legend_title='', markerstyle='circle', color='black', use_as_frame=None):
         """
         Add a plottable objet to this figure. This function performs a
         copy of the passed object and assigns it a random name. Once
@@ -340,7 +340,7 @@ class Figure(object):
 
             elif isinstance(obj, (ROOT.TH1, ROOT.TGraph, ROOT.TF1)):
                 self._theme_plottable(obj)
-                obj.SetMarkerStyple = pdic.get('markerstyle', 'circle')
+                obj.SetMarkerStyle(pdic['markerstyle'])
                 if pdic.get('color', None):
                     obj.color = pdic['color']
                 else:
