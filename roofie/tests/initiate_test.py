@@ -36,6 +36,10 @@ class Test_Figure(unittest.TestCase):
         f.add_plottable(h, legend_title="cool hist")
         legend_labels = [pdic['legend_title'] for pdic in f._plottables if pdic['legend_title'] != '']
         self.assertEqual(len(legend_labels), 1)
+        # add additional legend entry without plottable
+        f.add_plottable(None, legend_title="legend without plottable", markerstyle=20, color=20)
+        legend_labels = [pdic['legend_title'] for pdic in f._plottables if pdic['legend_title'] != '']
+        self.assertEqual(len(legend_labels), 2)
 
         # no old plottables if I make a new one:
         f = Figure()
@@ -74,6 +78,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         h = Hist1D(10, 0, 10)
         h.Fill(5)
         f.add_plottable(h, legend_title="some title")
+        f.add_plottable(None, legend_title="legend without plottable", markerstyle=20, color=20)
         c = f.draw_to_canvas()
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
@@ -410,3 +415,31 @@ class Test_beamify_add_canvas(unittest.TestCase):
         fig.add_plottable(h1, legend_title="hist 1")
         sec.add_figure(fig)
         latexdoc.finalize_document("test_add_canvas.tex")
+
+
+class Test_complicated_plot_for_visual_comparison(unittest.TestCase):
+    def test_busy_plot(self):
+        from ROOT import TF1
+        from rootpy.plotting import Hist1D
+        from roofie import Figure, Styles
+
+        h = Hist1D(30, -5, 5)
+        h.FillRandom('landau', 1000)
+
+        f = TF1("f", "100*exp(-0.5*((x)/2)**2)", -5, 5)
+
+        fig = Figure()
+        fig.style = Styles.Public_full
+        # Drawing the legend currently still screws up the y scale! :P
+        # This is why we love root...
+        fig.legend.title = "Functions"
+        fig.legend.position = 'tr'  # top right
+        fig.xtitle = "Mega X"
+        fig.ytitle = "Tera Y"
+
+        fig.add_plottable(h, legend_title="Landau")
+        fig.add_plottable(f, legend_title='Gaussian')
+
+        # add legend entry not associated with plottable
+        fig.add_plottable(None, legend_title='Unassociated legend', markerstyle='diamond', color='blue')
+        fig.save_to_file(path=".", name="busy_plot.pdf")

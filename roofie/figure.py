@@ -5,6 +5,7 @@ import os
 
 from rootpy import asrootpy, log
 from rootpy.plotting import Legend, Canvas, Pad, Graph
+from rootpy.plotting.base import Color, MarkerStyle
 from rootpy.plotting.utils import get_limits
 
 import ROOT
@@ -160,14 +161,18 @@ class Figure(object):
         return leg
 
     def _theme_plottable(self, obj):
-        axes = obj.GetXaxis(), obj.GetYaxis()
-        for axis in axes:
-            axis.SetLabelSize(self.style.axisLabelSize)
-            axis.SetLabelFont(self.style.labelfont)
-            axis.SetTitleFont(self.style.titlefont)
-            axis.SetTitleSize(self.style.axisTitleSize)
-        # yaxis only settings:
-        axes[1].SetTitleOffset(self.style.plot_ytitle_offset)
+        try:
+            axes = obj.GetXaxis(), obj.GetYaxis()
+            for axis in axes:
+                axis.SetLabelSize(self.style.axisLabelSize)
+                axis.SetLabelFont(self.style.labelfont)
+                axis.SetTitleFont(self.style.titlefont)
+                axis.SetTitleSize(self.style.axisTitleSize)
+            # yaxis only settings:
+            axes[1].SetTitleOffset(self.style.plot_ytitle_offset)
+        except AttributeError:
+            # obj might not be of the right type
+            pass
         # apply styles, this might need to get more fine grained
         # markers are avilable in children of TAttMarker
         if isinstance(obj, ROOT.TAttMarker):
@@ -182,12 +187,16 @@ class Figure(object):
 
         Parameters
         ----------
-        obj : Hist1D, Graph
-            A root plottable object
+        obj : Hist1D, Graph, None
+            A root plottable object; If none, this object will only show up in the legend
         legend_title : string
             Title for this plottable as shown in the legend
         """
-        p = asrootpy(obj.Clone(gen_random_name()))
+        # Make a copy if we got a plottable
+        if obj is not None:
+            p = asrootpy(obj.Clone(gen_random_name()))
+        else:
+            p = ROOT.TLegendEntry()
         if isinstance(p, ROOT.TH1):
             p.SetDirectory(0)  # make sure that the hist is not associated with a file anymore!
         self._plottables.append({'p': p,
@@ -235,7 +244,6 @@ class Figure(object):
         # set legend title if any
         if legend.GetHeader():
             self.legend.title = legend.GetHeader()
-
 
         self._plottables += plottables
 
@@ -324,47 +332,51 @@ class Figure(object):
 
         for i, pdic in enumerate(self._plottables):
             obj = pdic['p']
-            if pdic.get('markerstyle', None):
-                obj.markerstyle = pdic['markerstyle']
-            else:
-                obj.markerstyle = 'circle'
-            if pdic.get('color', None):
-                obj.color = pdic['color']
-            else:
-                try:
-                    color = next(colors)
-                except StopIteration:
-                    log.warning("Ran out of colors; defaulting to black")
-                    color = 1
-                obj.color = color
-            xaxis = obj.GetXaxis()
-            yaxis = obj.GetYaxis()
+            if isinstance(obj, ROOT.TLegendEntry):
+                _root_color = Color(pdic['color'])
+                _root_markerstyle = MarkerStyle(pdic['markerstyle'])
+                obj.SetMarkerStyle(_root_markerstyle('root'))
+                obj.SetMarkerColor(_root_color('root'))
 
-            # Set the title to the given title:
-            obj.title = self.title
+            elif isinstance(obj, (ROOT.TH1, ROOT.TGraph, ROOT.TF1)):
+                self._theme_plottable(obj)
+                obj.SetMarkerStyple = pdic.get('markerstyle', 'circle')
+                if pdic.get('color', None):
+                    obj.color = pdic['color']
+                else:
+                    try:
+                        color = next(colors)
+                    except StopIteration:
+                        log.warning("Ran out of colors; defaulting to black")
+                        color = 1
+                    obj.color = color
+                xaxis = obj.GetXaxis()
+                yaxis = obj.GetYaxis()
 
-            self._theme_plottable(obj)
+                # Set the title to the given title:
+                obj.title = self.title
 
-            # the xaxis depends on the type of the plottable :P
-            if isinstance(obj, ROOT.TGraph):
-                # SetLimit on a TH1 is simply messing up the lables of the axis to fuck over the user!
-                xaxis.SetLimits(xmin, xmax)
-                yaxis.SetLimits(ymin, ymax)  # for unbinned data
-                # 'P' plots the current marker, 'L' would connect the dots with a simple line
-                # see: https://root.cern.ch/doc/master/classTGraphPainter.html for more draw options
-                drawoption = 'Psame'
-            elif isinstance(obj, ROOT.TH1):
-                obj.SetStats(0)
-                xaxis.SetRangeUser(xmin, xmax)
-                yaxis.SetRangeUser(ymin, ymax)
-                drawoption = 'same'
-            elif isinstance(obj, ROOT.TF1):
-                # xaxis.SetLimits(xmin, xmax)
-                # yaxis.SetLimits(ymin, ymax)  # for unbinned data
-                drawoption = 'same'
+                # the xaxis depends on the type of the plottable :P
+                if isinstance(obj, ROOT.TGraph):
+                    # SetLimit on a TH1 is simply messing up the lables of the axis to fuck over the user!
+                    xaxis.SetLimits(xmin, xmax)
+                    yaxis.SetLimits(ymin, ymax)  # for unbinned data
+                    # 'P' plots the current marker, 'L' would connect the dots with a simple line
+                    # see: https://root.cern.ch/doc/master/classTGraphPainter.html for more draw options
+                    drawoption = 'Psame'
+                elif isinstance(obj, ROOT.TH1):
+                    obj.SetStats(0)
+                    xaxis.SetRangeUser(xmin, xmax)
+                    yaxis.SetRangeUser(ymin, ymax)
+                    drawoption = 'same'
+                elif isinstance(obj, ROOT.TF1):
+                    # xaxis.SetLimits(xmin, xmax)
+                    # yaxis.SetLimits(ymin, ymax)  # for unbinned data
+                    drawoption = 'same'
+                obj.Draw(drawoption)
+            # Its ok if obj is non; then we just add it to the legend.
             else:
                 raise TypeError("Un-plottable type given.")
-            obj.Draw(drawoption)
         pad_plot.SetTicks()
         pad_plot.SetLogx(self.plot.logx)
         pad_plot.SetLogy(self.plot.logy)
