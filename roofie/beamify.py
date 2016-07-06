@@ -17,6 +17,23 @@ from .figure import Figure
 
 import ROOT.TCanvas
 
+try:
+    from subprocess import check_output
+except ImportError:
+    # check_output not avialable in python 2.6
+    def check_output(*popenargs, **kwargs):
+        if 'stdout' in kwargs:
+            raise ValueError('stdout argument not allowed, it will be overridden.')
+        process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+        output, unused_err = process.communicate()
+        retcode = process.poll()
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = popenargs[0]
+            raise subprocess.CalledProcessError(retcode, cmd)
+        return output
+
 
 def _safe_folder_name(unsafe):
     t = re.compile("[a-zA-Z0-9.,_-]")
@@ -151,10 +168,10 @@ class Beamerdoc(object):
             f.write(self._create_latex_and_save_figures())
 
         cmd = ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(output_file_name)]
-        print subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+        check_output(cmd, cwd=os.path.abspath(self.output_dir))
         try:
             # only cache errors for the second compiling try, since the first  might complain about old stuff
-            subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+            check_output(cmd, cwd=os.path.abspath(self.output_dir))
         except subprocess.CalledProcessError:
             print "An error occured while compiling the latex document. See 'summary.log' for details"
 
