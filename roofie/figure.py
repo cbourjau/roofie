@@ -340,7 +340,7 @@ class Figure(object):
 
             elif isinstance(obj, (ROOT.TH1, ROOT.TGraph, ROOT.TF1)):
                 self._theme_plottable(obj)
-                obj.SetMarkerStyle(pdic['markerstyle'])
+                obj.SetMarkerStyle(pdic.get('markerstyle', 'circle'))
                 if pdic.get('color', None):
                     obj.color = pdic['color']
                 else:
