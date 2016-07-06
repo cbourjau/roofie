@@ -381,7 +381,7 @@ class Test_import_from_canvas(unittest.TestCase):
 
         # make a pdf for visual comparison
         latexdoc = Beamerdoc("Christian Bourjau", "Test plots")
-        sec = latexdoc.add_section("Import from canvas (same content, maybe different positions")
+        sec = latexdoc.add_section("Import from canvas (same content, maybe different positions)")
         sec.add_figure(self.orig_fig)
         sec.add_figure(fig)
         latexdoc.finalize_document("test_imports.tex")
