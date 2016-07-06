@@ -493,7 +493,7 @@ class Figure(object):
         ROOT.gStyle.SetPaperSize(self.style.canvasWidth / self.style.pt_per_cm,
                                  self.style.canvasHeight / self.style.pt_per_cm,)
         c = self.draw_to_canvas()
-        c.Print("{}/{}".format(path, name))
+        c.Print("{0}/{1}".format(path, name))
 
         # reset the page size
         # ROOT.gStyle.SetPaperSize(paper_width, paper_height)

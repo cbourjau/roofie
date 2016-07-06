@@ -28,7 +28,7 @@ class Beamerdoc(object):
         self.title = title
         self.author = author
         self.sections = []
-        self.output_dir = './{}/'.format(_safe_folder_name(self.title))
+        self.output_dir = './{0}/'.format(_safe_folder_name(self.title))
         self.preamble = textwrap.dedent(r"""
         \documentclass[xcolor=dvipsnames]{{beamer}}
 
@@ -64,12 +64,12 @@ class Beamerdoc(object):
             \frametitle{{{title}}}
             \begin{{columns}}
             \begin{{column}}{{.45\textwidth}}
-            {}\\
-            {}
+            {0}\\
+            {1}
             \end{{column}}
             \begin{{column}}{{.45\textwidth}}
-            {}\\
-            {}
+            {2}\\
+            {3}
             \end{{column}}
             \end{{columns}}
             \end{{frame}}
@@ -89,12 +89,12 @@ class Beamerdoc(object):
                 Latex code for this section with linkes to the figures already included
             """
             fig_paths = self._write_figures_to_disc()
-            section_body = '\section{{{}}}'.format(self.title)
+            section_body = '\section{{{0}}}'.format(self.title)
             figs_per_frame = 4
             for frame_num in xrange(0, len(fig_paths), figs_per_frame):
                 ig_cmds = ['' for i in range(figs_per_frame)]
                 for fig_num_frame, path in enumerate(fig_paths[frame_num:(frame_num + figs_per_frame)]):
-                    ig_cmds[fig_num_frame] = format(r'\includegraphics[width=\textwidth]{{{}}}'.format(path))
+                    ig_cmds[fig_num_frame] = format(r'\includegraphics[width=\textwidth]{{{0}}}'.format(path))
                 section_body += self.frame_template.format(title=self.title, *ig_cmds)
             return section_body
 
@@ -151,7 +151,7 @@ class Beamerdoc(object):
             f.write(self._create_latex_and_save_figures())
 
         cmd = ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(output_file_name)]
-        subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+        print subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
         try:
             # only cache errors for the second compiling try, since the first  might complain about old stuff
             subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
