@@ -2,6 +2,12 @@
 Roofie (Root Figures Easy)
 ==========================
 
+Status
+------
+Roofie is usable, but I would not consider the API stable by any means. If you want to use Roofie and want to make sure that your plotting script will still work in a few months time, you should either copy roofie's files into your own project or be proficient enough in git to check out previous commits.
+
+What is Roofie
+--------------
 The idea of roofie is to make plotting with root easier and less error prone. Root is certainly capable of producing good looking plot, but they do not come easy. Sometimes, one is even tempted to see malicious intent in some of root's behavior, but it is most likely just legacy which is to blame.
 
 Anybody who ever did any plotting with root probably agrees with this part. But what does "roofie" do about it? For starters, its not a `C` macro! Instead it is written in python using the `pyroot`'s pythonaization `rootpy`. But on a more reflective note one should first ask what roofie is not: It is not an attempt to give the user the full customization capabilities of plain (py)root, nor is it trying to be fast or memory efficient. Rather it aims at making the "standard" figures easy to use in every aspect. If more is needed, "roofie" including the fallback possibility to export the TCanvas of a figure and do whatever you want with it on the pure-root level.
