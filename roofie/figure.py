@@ -143,6 +143,7 @@ class Figure(object):
         palette = 'root'
         palette_ncolors = 10
         xmin, xmax, ymin, ymax = None, None, None, None
+        frame = None
 
     class Legend(object):
         title = None
@@ -173,7 +174,7 @@ class Figure(object):
             # marker size 1 == 8 px, and never scales with canvas...
             obj.SetMarkerSize(self.style.markerSizepx / 8.0)
 
-    def add_plottable(self, obj, legend_title='', markerstyle=None, color=None):
+    def add_plottable(self, obj, legend_title='', markerstyle=None, color=None, use_as_frame=None):
         """
         Add a plottable objet to this figure. This function performs a
         copy of the passed object and assigns it a random name. Once
@@ -193,6 +194,7 @@ class Figure(object):
                                  'legend_title': legend_title,
                                  'markerstyle': markerstyle,
                                  'color': color,
+                                 'use_as_frame': use_as_frame,
                                  })
 
     def import_plottables_from_canvas(self, canvas):
@@ -277,27 +279,37 @@ class Figure(object):
             raise TypeError("unable to determine plot axes ranges from the given plottagles")
 
         colors = get_color_generator(self.plot.palette, self.plot.palette_ncolors)
-
-        # draw an empty histogram within the given ranges;
-        frame = Graph()
-        frame.SetName("__frame")
-        # add a silly point in order to have root draw this frame...
-        frame.SetPoint(0, 0, 0)
-        frame.GetXaxis().SetLimits(xmin, xmax)
-        frame.GetYaxis().SetLimits(ymin, ymax)
-        frame.SetMinimum(ymin)
-        frame.SetMaximum(ymax)
-
-        frame.GetXaxis().SetTitle(self.xtitle)
-        frame.GetYaxis().SetTitle(self.ytitle)
+        # draw an empty frame within the given ranges;
+        frame_from_plottable = [p for p in self._plottables if p.get('use_as_frame')]
+        if len(frame_from_plottable) > 0:
+            frame = frame_from_plottable[0]['p'].Clone('__frame')
+            frame.Reset()
+            frame.SetStats(0)
+            frame.xaxis.SetRangeUser(xmin, xmax)
+            frame.yaxis.SetRangeUser(ymin, ymax)
+            frame.GetXaxis().SetTitle(self.xtitle)
+            frame.GetYaxis().SetTitle(self.ytitle)
+            self._theme_plottable(frame)
+            frame.Draw()
+        else:
+            frame = Graph()
+            frame.SetName("__frame")
+            # add a silly point in order to have root draw this frame...
+            frame.SetPoint(0, 0, 0)
+            frame.GetXaxis().SetLimits(xmin, xmax)
+            frame.GetYaxis().SetLimits(ymin, ymax)
+            frame.SetMinimum(ymin)
+            frame.SetMaximum(ymax)
+            frame.GetXaxis().SetTitle(self.xtitle)
+            frame.GetYaxis().SetTitle(self.ytitle)
+            self._theme_plottable(frame)
+            # Draw this frame: 'A' should draw the axis, but does not work if nothing else is drawn.
+            # L would draw a line between the points but is seems to do nothing if only one point is present
+            # P would also draw that silly point but we don't want that!
+            frame.Draw("AL")
 
         xtick_length = frame.GetXaxis().GetTickLength()
         ytick_length = frame.GetYaxis().GetTickLength()
-        self._theme_plottable(frame)
-        # Draw this frame: 'A' should draw the axis, but does not work if nothing else is drawn.
-        # L would draw a line between the points but is seems to do nothing if only one point is present
-        # P would also draw that silly point but we don't want that!
-        frame.Draw("AL")
 
         for i, pdic in enumerate(self._plottables):
             obj = pdic['p']
