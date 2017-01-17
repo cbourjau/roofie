@@ -11,6 +11,12 @@ import ROOT
 
 # from external import husl
 
+# suppress some nonsense logging messages when writing to pdfs.
+# Also, setup default logger
+log["/ROOT.TCanvas.Print"].setLevel(log.WARNING)
+logging.basicConfig(level=logging.DEBUG)
+log = log["/roofie"]
+
 
 def is_plottable(obj):
     """
@@ -55,10 +61,6 @@ class Styles(object):
         canvasHeight = 300
         plot_margins = (.13, .05, .13, .04)
         plot_ytitle_offset = 1.15
-
-
-logging.basicConfig(level=logging.DEBUG)
-log = log["/roofie"]
 
 
 def gen_random_name():
