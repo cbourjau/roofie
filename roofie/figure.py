@@ -42,7 +42,7 @@ class Styles(object):
         canvasWidth = 340
         canvasHeight = 300
         plot_margins = (.13, .05, .13, .1)   # left, right, bottom, top
-        plot_ytitle_offset = 1.15  # factor of the normal offset :P, may lay outside of the canvas
+        plot_ytitle_offset = 1.4  # factor of the normal offset :P, may lay outside of the canvas
 
     class Presentation_half(_Default_Style):
         axisTitleSize = 10
@@ -140,7 +140,7 @@ class Figure(object):
         logy = False
         gridx = False
         gridy = False
-        palette = 'husl'
+        palette = 'root'
         palette_ncolors = 10
         xmin, xmax, ymin, ymax = None, None, None, None
 
