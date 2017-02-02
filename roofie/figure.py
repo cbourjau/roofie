@@ -7,6 +7,7 @@ from rootpy import asrootpy, log
 from rootpy.plotting import Legend, Canvas, Pad, Graph
 from rootpy.plotting.utils import get_limits
 
+from .utils import _turn_on_style
 import ROOT
 
 # from external import husl
@@ -16,6 +17,9 @@ import ROOT
 log["/ROOT.TCanvas.Print"].setLevel(log.WARNING)
 logging.basicConfig(level=logging.DEBUG)
 log = log["/roofie"]
+
+# Turn on the "style"...
+# _turn_on_style()
 
 
 def is_plottable(obj):
@@ -33,6 +37,7 @@ class Styles(object):
         pt_per_cm = 28.4527625
         titlefont = 43
         labelfont = 43
+        ticklength = 0.04
         markerSizepx = 4  # number of pixels of the marker
 
     class Presentation_full(_Default_Style):
@@ -159,22 +164,51 @@ class Figure(object):
         leg.SetFillStyle(0)   # transparent background of legend TPave(!)
         return leg
 
-    def _theme_plottable(self, obj):
-        axes = obj.GetXaxis(), obj.GetYaxis()
-        for axis in axes:
-            axis.SetLabelSize(self.style.axisLabelSize)
-            axis.SetLabelFont(self.style.labelfont)
-            axis.SetTitleFont(self.style.titlefont)
-            axis.SetTitleSize(self.style.axisTitleSize)
-        # yaxis only settings:
-        axes[1].SetTitleOffset(self.style.plot_ytitle_offset)
-        # apply styles, this might need to get more fine grained
-        # markers are avilable in children of TAttMarker
-        if isinstance(obj, ROOT.TAttMarker):
-            # marker size 1 == 8 px, and never scales with canvas...
-            obj.SetMarkerSize(self.style.markerSizepx / 8.0)
+    def _theme_plottables(self):
+        """
+        Apply theming to all plottables of this figure as described in
+        the pdict dictionary. This function should be called just
+        before drawing everything to the canvas.
+        """
+        pdics = self._plottables
+        colors = get_color_generator(self.plot.palette, self.plot.palette_ncolors)
+        for pdic in pdics:
+            obj = pdic['p']
+            # Marker(line)style must be present at this point
+            if pdic.get('markerstyle'):
+                obj.markerstyle = pdic['markerstyle']
+            if pdic.get('linestyle'):
+                obj.linestyle = pdic['linestyle']
 
-    def add_plottable(self, obj, legend_title='', markerstyle=None, color=None, use_as_frame=None):
+            # if color is not present, get one from the color generator
+            if pdic.get('color', None):
+                obj.color = pdic['color']
+            else:
+                try:
+                    color = next(colors)
+                except StopIteration:
+                    log.warning("Ran out of colors; defaulting to black")
+                    color = 1
+                obj.color = color
+
+            # Set the title to the given title (sledge hammer method)
+            obj.title = self.title
+
+            axes = obj.GetXaxis(), obj.GetYaxis()
+            for axis in axes:
+                axis.SetLabelSize(self.style.axisLabelSize)
+                axis.SetLabelFont(self.style.labelfont)
+                axis.SetTitleFont(self.style.titlefont)
+                axis.SetTitleSize(self.style.axisTitleSize)
+            # yaxis only settings:
+            axes[1].SetTitleOffset(self.style.plot_ytitle_offset)
+            # apply styles, this might need to get more fine grained
+            # markers are avilable in children of TAttMarker
+            if isinstance(obj, ROOT.TAttMarker) and pdic.get('markerstyle', None):
+                # marker size 1 == 8 px, and never scales with canvas...
+                obj.SetMarkerSize(self.style.markerSizepx / 8.0)
+
+    def add_plottable(self, obj, legend_title='', markerstyle=20, color=None, use_as_frame=None, linestyle=None):
         """
         Add a plottable objet to this figure. This function performs a
         copy of the passed object and assigns it a random name. Once
@@ -186,13 +220,24 @@ class Figure(object):
             A root plottable object
         legend_title : string
             Title for this plottable as shown in the legend
+        linestyle : int
+            Linestyle for connecting various points. Uses the intger
+            notation for TAttLine. Histograms hace style 0 (no
+            connection) by default, Graphs and functions have style 1
+            (solid line).
         """
         p = asrootpy(obj.Clone(gen_random_name()))
         if isinstance(p, ROOT.TH1):
             p.SetDirectory(0)  # make sure that the hist is not associated with a file anymore!
+        if not linestyle:
+            if isinstance(p, ROOT.TH1):
+                linestyle = 0
+            else:
+                linestyle = 1
         self._plottables.append({'p': p,
                                  'legend_title': legend_title,
                                  'markerstyle': markerstyle,
+                                 'linestyle': linestyle,
                                  'color': color,
                                  'use_as_frame': use_as_frame,
                                  })
@@ -244,12 +289,7 @@ class Figure(object):
             pad_legend.SetLeftMargin(0.0)
             pad_legend.SetFillStyle(0)  # make this pad transparent
             pad_legend.Draw()
-        else:
-            legend_width = 0
-        pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot", )
-        pad_plot.SetMargin(*self.style.plot_margins)
-        pad_plot.Draw()
-        pad_plot.cd()
+        pad_plot = self._prepare_plot_pad()
 
         # awkward hack around a bug in get limits where everything fails if one plottable is shitty...
         xmin, xmax, ymin, ymax = None, None, None, None
@@ -278,61 +318,13 @@ class Figure(object):
         if not all([val is not None for val in [xmin, xmax, ymin, ymax]]):
             raise TypeError("unable to determine plot axes ranges from the given plottagles")
 
-        colors = get_color_generator(self.plot.palette, self.plot.palette_ncolors)
-        # draw an empty frame within the given ranges;
-        frame_from_plottable = [p for p in self._plottables if p.get('use_as_frame')]
-        if len(frame_from_plottable) > 0:
-            frame = frame_from_plottable[0]['p'].Clone('__frame')
-            frame.Reset()
-            frame.SetStats(0)
-            frame.xaxis.SetRangeUser(xmin, xmax)
-            frame.yaxis.SetRangeUser(ymin, ymax)
-            frame.GetXaxis().SetTitle(self.xtitle)
-            frame.GetYaxis().SetTitle(self.ytitle)
-            self._theme_plottable(frame)
-            frame.Draw()
-        else:
-            frame = Graph()
-            frame.SetName("__frame")
-            # add a silly point in order to have root draw this frame...
-            frame.SetPoint(0, 0, 0)
-            frame.GetXaxis().SetLimits(xmin, xmax)
-            frame.GetYaxis().SetLimits(ymin, ymax)
-            frame.SetMinimum(ymin)
-            frame.SetMaximum(ymax)
-            frame.GetXaxis().SetTitle(self.xtitle)
-            frame.GetYaxis().SetTitle(self.ytitle)
-            self._theme_plottable(frame)
-            # Draw this frame: 'A' should draw the axis, but does not work if nothing else is drawn.
-            # L would draw a line between the points but is seems to do nothing if only one point is present
-            # P would also draw that silly point but we don't want that!
-            frame.Draw("AL")
-
-        xtick_length = frame.GetXaxis().GetTickLength()
-        ytick_length = frame.GetYaxis().GetTickLength()
-
+        self._prepare_frame(xmin, xmax, ymin, ymax)
+        self._theme_plottables()
+        # Set ranges
         for i, pdic in enumerate(self._plottables):
             obj = pdic['p']
-            if pdic.get('markerstyle', None):
-                obj.markerstyle = pdic['markerstyle']
-            else:
-                obj.markerstyle = 'circle'
-            if pdic.get('color', None):
-                obj.color = pdic['color']
-            else:
-                try:
-                    color = next(colors)
-                except StopIteration:
-                    log.warning("Ran out of colors; defaulting to black")
-                    color = 1
-                obj.color = color
             xaxis = obj.GetXaxis()
             yaxis = obj.GetYaxis()
-
-            # Set the title to the given title:
-            obj.title = self.title
-
-            self._theme_plottable(obj)
 
             # the xaxis depends on the type of the plottable :P
             if isinstance(obj, ROOT.TGraph):
@@ -354,51 +346,10 @@ class Figure(object):
             else:
                 raise TypeError("Un-plottable type given.")
             obj.Draw(drawoption)
-        pad_plot.SetTicks()
-        pad_plot.SetLogx(self.plot.logx)
-        pad_plot.SetLogy(self.plot.logy)
-        pad_plot.SetGridx(self.plot.gridx)
-        pad_plot.SetGridy(self.plot.gridy)
-
-        # do we have legend titles?
-        if any([pdic['legend_title'] for pdic in self._plottables]):
-            leg = self._create_legend()
-            longest_label = 0
-            for pdic in self._plottables:
-                if not pdic.get('legend_title', False):
-                    continue
-                leg.AddEntry(pdic['p'], pdic['legend_title'])
-                if len(pdic['legend_title']) > longest_label:
-                    longest_label = len(pdic['legend_title'])
-
-            # Set the legend position
-            # vertical:
-            if self.legend.position.startswith('t'):
-                leg_hight = leg.y2 - leg.y1
-                leg.y2 = 1 - pad_plot.GetTopMargin() - ytick_length
-                leg.y1 = leg.y2 - leg_hight
-            elif self.legend.position.startswith('b'):
-                leg_hight = leg.y2 - leg.y1
-                leg.y1 = pad_plot.GetBottomMargin() + ytick_length
-                leg.y2 = leg.y1 + leg_hight
-            # horizontal:
-            if self.legend.position[1:].startswith('l'):
-                leg_width = 0.3
-                leg.x1 = pad_plot.GetLeftMargin() + xtick_length
-                leg.x2 = leg.x1 + leg_width
-            elif self.legend.position[1:].startswith('r'):
-                leg_width = 0.3
-                leg.x2 = 1 - pad_plot.GetRightMargin() - xtick_length
-                leg.x1 = leg.x2 - leg_width
-            if self.legend.position == 'seperate':
-                with pad_legend:
-                    leg.Draw()
-            else:
-                leg.Draw()
-        if self.plot.logx:
-            pad_plot.SetLogx(True)
-        if self.plot.logy:
-            pad_plot.SetLogy(True)
+        if self.legend.position == 'seperate':
+            self._draw_legend(pad_legend)
+        else:
+            self._draw_legend(pad_plot)
         pad_plot.Update()  # needed sometimes with import of canvas. maybe because other "plot" pads exist...
         return c
 
@@ -475,3 +426,142 @@ class Figure(object):
 
         # reset the page size
         # ROOT.gStyle.SetPaperSize(paper_width, paper_height)
+
+    def _prepare_plot_pad(self):
+        """
+        Prepare a pad where the plot will be drawn
+
+        Returns
+        -------
+        TPad : The prepared pad
+        """
+        if self.legend.position == 'seperate':
+            legend_width = .2
+        else:
+            legend_width = 0
+        pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot")
+        pad_plot.SetMargin(*self.style.plot_margins)
+        pad_plot.Draw()
+        pad_plot.cd()
+        pad_plot.SetTicks()
+        pad_plot.SetLogx(self.plot.logx)
+        pad_plot.SetLogy(self.plot.logy)
+        pad_plot.SetGridx(self.plot.gridx)
+        pad_plot.SetGridy(self.plot.gridy)
+
+        # ALICE theming:
+        pad_plot.SetTicks(1, 1)  # default anyways
+        pad_plot.SetFrameLineWidth(1)
+        if self.plot.logx:
+            pad_plot.SetLogx()
+        if self.plot.logy:
+            pad_plot.SetLogy(True)
+        return pad_plot
+
+    def _prepare_frame(self, xmin, xmax, ymin, ymax):
+        """
+        Draw an empty frame in the current pad for all plots to be put in
+
+        Return
+        ------
+        Plottable :
+            The plottable which was used to draw the frame
+        """
+        # draw an empty frame within the given ranges;
+        frame_from_plottable = [p for p in self._plottables if p.get('use_as_frame')]
+        if len(frame_from_plottable) > 0:
+            frame = frame_from_plottable[0]['p'].Clone('__frame')
+            frame.Reset()
+            frame.SetStats(0)
+            frame.xaxis.SetRangeUser(xmin, xmax)
+            frame.yaxis.SetRangeUser(ymin, ymax)
+            drawoption = ""
+        else:
+            frame = Graph()
+            frame.SetName("__frame")
+            # add a silly point in order to have root draw this frame...
+            frame.SetPoint(0, 0, 0)
+            frame.GetXaxis().SetLimits(xmin, xmax)
+            frame.GetYaxis().SetLimits(ymin, ymax)
+            frame.SetMinimum(ymin)
+            frame.SetMaximum(ymax)
+            # self._theme_plottable(frame)
+            # Draw this frame: 'A' should draw the axis, but does not work if nothing else is drawn.
+            # L would draw a line between the points but is seems to do nothing if only one point is present
+            # P would also draw that silly point but we don't want that!
+            drawoption = "AL"
+        frame.xaxis.SetTickLength(self.style.ticklength)
+        frame.yaxis.SetTickLength(self.style.ticklength)
+        frame.GetXaxis().SetTitle(self.xtitle)
+        frame.GetYaxis().SetTitle(self.ytitle)
+        frame.GetYaxis().SetTitleOffset(self.style.plot_ytitle_offset)
+        frame.Draw(drawoption)
+        return frame
+
+    def _draw_legend(self, pad):
+        """
+        Draw the legend into the given pad
+        """
+        # do we have legend titles?
+        if not any([pdic['legend_title'] for pdic in self._plottables]):
+            return
+
+        leg = self._create_legend()
+        longest_label = 0
+        for pdic in self._plottables:
+            if not pdic.get('legend_title', False):
+                continue
+            leg.AddEntry(pdic['p'], pdic['legend_title'], 'lp')
+            if len(pdic['legend_title']) > longest_label:
+                longest_label = len(pdic['legend_title'])
+
+        # Set the legend position
+        leg_hight = leg.y2 - leg.y1
+        leg_width = 0.3  # should be calculated from longest entry...
+
+        # position given in ndc?
+        if isinstance(self.legend.position, list):
+            leg.x1 = self.legend.position[0]
+            leg.y1 = self.legend.position[1]
+            leg.x2 = self.legend.position[0] + leg_width
+            leg.y2 = self.legend.position[1] + leg_hight
+            leg.Draw()
+        else:
+            # vertical:
+            if self.legend.position.startswith('t'):
+                leg.y2 = 1 - pad.GetTopMargin() - self.style.ticklength
+                leg.y1 = leg.y2 - leg_hight
+            elif self.legend.position.startswith('b'):
+                leg.y1 = pad.GetBottomMargin() + self.style.ticklength
+                leg.y2 = leg.y1 + leg_hight
+            # horizontal:
+            if self.legend.position[1:].startswith('l'):
+                leg.x1 = pad.GetLeftMargin() + self.style.ticklength
+                leg.x2 = leg.x1 + leg_width
+            elif self.legend.position[1:].startswith('r'):
+                leg_width = 0.3
+                leg.x2 = 1 - pad.GetRightMargin() - self.style.ticklength
+                leg.x1 = leg.x2 - leg_width
+            if self.legend.position == 'seperate':
+                # want to stay in the pad-plot, so we open a context to draw the legend
+                with pad:
+                    leg.Draw()
+            else:
+                leg.Draw()
+
+    def add_text(self, xlow, ylow, text, size=None):
+        """
+        Draw the given text at the given postion within the current pad
+        Parameter
+        ---------
+        xlow, ylow : float
+            Bottom left postion of the text box in NDC ([0, 1]) coordinates
+        text : string
+        size : int
+            Text size in pt. Defaults to legend size
+        """
+        tex = ROOT.TLatex(xlow, ylow, text)
+        tex.SetNDC()
+        tex.SetTextFont(43)
+        tex.SetTextSize(self.style.legendSize)
+        tex.Draw()
