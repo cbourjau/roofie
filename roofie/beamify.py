@@ -13,6 +13,27 @@ import string
 import subprocess
 import textwrap
 
+from .figure import Figure
+
+import ROOT.TCanvas
+
+try:
+    from subprocess import check_output
+except ImportError:
+    # check_output not avialable in python 2.6
+    def check_output(*popenargs, **kwargs):
+        if 'stdout' in kwargs:
+            raise ValueError('stdout argument not allowed, it will be overridden.')
+        process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+        output, unused_err = process.communicate()
+        retcode = process.poll()
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = popenargs[0]
+            raise subprocess.CalledProcessError(retcode, cmd)
+        return output
+
 
 def _safe_folder_name(unsafe):
     t = re.compile("[a-zA-Z0-9.,_-]")
@@ -24,7 +45,7 @@ class Beamerdoc(object):
         self.title = title
         self.author = author
         self.sections = []
-        self.output_dir = './{}/'.format(_safe_folder_name(self.title))
+        self.output_dir = './{0}/'.format(_safe_folder_name(self.title))
         self.preamble = textwrap.dedent(r"""
         \documentclass[xcolor=dvipsnames]{{beamer}}
 
@@ -60,12 +81,12 @@ class Beamerdoc(object):
             \frametitle{{{title}}}
             \begin{{columns}}
             \begin{{column}}{{.45\textwidth}}
-            {}\\
-            {}
+            {0}\\
+            {1}
             \end{{column}}
             \begin{{column}}{{.45\textwidth}}
-            {}\\
-            {}
+            {2}\\
+            {3}
             \end{{column}}
             \end{{columns}}
             \end{{frame}}
@@ -85,12 +106,17 @@ class Beamerdoc(object):
                 Latex code for this section with linkes to the figures already included
             """
             fig_paths = self._write_figures_to_disc()
-            section_body = '\section{{{}}}'.format(self.title)
+            section_body = '\section{{{0}}}'.format(self.title)
             figs_per_frame = 4
+            frame_num = None
             for frame_num in xrange(0, len(fig_paths), figs_per_frame):
                 ig_cmds = ['' for i in range(figs_per_frame)]
                 for fig_num_frame, path in enumerate(fig_paths[frame_num:(frame_num + figs_per_frame)]):
-                    ig_cmds[fig_num_frame] = format(r'\includegraphics[width=\textwidth]{{{}}}'.format(path))
+                    ig_cmds[fig_num_frame] = format(r'\includegraphics[width=\textwidth]{{{0}}}'.format(path))
+                section_body += self.frame_template.format(title=self.title, *ig_cmds)
+            # were there no figures in this section?
+            if frame_num is None:
+                ig_cmds = ['' for i in range(figs_per_frame)]
                 section_body += self.frame_template.format(title=self.title, *ig_cmds)
             return section_body
 
@@ -104,11 +130,22 @@ class Beamerdoc(object):
                 Paths to the files written to disc, relative to where the tex file will be
             """
             paths = []
-            fig_folder_safe = 'figures/' + _safe_folder_name(self.title) + "/"
+            fig_folder_safe = os.path.join('figures/', _safe_folder_name(self.title))
             for fig in self.figures:
                 rand_name = ''.join(random.choice(string.ascii_letters) for _ in range(5)) + ".pdf"
-                fig.save_to_file(self.document.output_dir + fig_folder_safe, rand_name)
-                paths.append("./" + fig_folder_safe + rand_name)
+                fig_path_from_latex_root = os.path.join(self.document.output_dir, fig_folder_safe)
+                if isinstance(fig, Figure):
+                    fig.save_to_file(fig_path_from_latex_root, rand_name)
+                if isinstance(fig, ROOT.TCanvas):
+                    # make sure the folder exists
+                    try:
+                        os.makedirs(fig_path_from_latex_root)
+                    except OSError:
+                        pass
+                    # root needs to draw the canvas first otherwise it crashes, sometimes...
+                    fig.Draw()
+                    fig.SaveAs(os.path.join(fig_path_from_latex_root, rand_name))
+                paths.append(os.path.join("./", fig_folder_safe, rand_name))
             return paths
 
     def add_section(self, sec_title):
@@ -123,11 +160,10 @@ class Beamerdoc(object):
         body += self.postamble
         return body
 
-    def finalize_document(self):
+    def finalize_document(self, output_file_name="summary.tex"):
         """
         Assamble the latex document and run the compile command
         """
-        output_file_name = "summary.tex"
         try:
             os.makedirs(self.output_dir)
         except OSError:
@@ -137,10 +173,10 @@ class Beamerdoc(object):
             f.write(self._create_latex_and_save_figures())
 
         cmd = ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(output_file_name)]
-        subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+        check_output(cmd, cwd=os.path.abspath(self.output_dir))
         try:
             # only cache errors for the second compiling try, since the first  might complain about old stuff
-            subprocess.check_output(cmd, cwd=os.path.abspath(self.output_dir))
+            check_output(cmd, cwd=os.path.abspath(self.output_dir))
         except subprocess.CalledProcessError:
             print "An error occured while compiling the latex document. See 'summary.log' for details"
 

@@ -8,7 +8,7 @@ from rootpy.io import File
 
 from ROOT import TCanvas, TLegend, TFile, TDirectoryFile, TPad, TF1
 
-from roofie.figure import Figure, Styles
+from roofie import Figure, Styles, Beamerdoc
 
 import ROOT
 
@@ -36,6 +36,10 @@ class Test_Figure(unittest.TestCase):
         f.add_plottable(h, legend_title="cool hist")
         legend_labels = [pdic['legend_title'] for pdic in f._plottables if pdic['legend_title'] != '']
         self.assertEqual(len(legend_labels), 1)
+        # add additional legend entry without plottable
+        f.add_plottable(None, legend_title="legend without plottable", markerstyle=20, color=20)
+        legend_labels = [pdic['legend_title'] for pdic in f._plottables if pdic['legend_title'] != '']
+        self.assertEqual(len(legend_labels), 2)
 
         # no old plottables if I make a new one:
         f = Figure()
@@ -74,6 +78,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         h = Hist1D(10, 0, 10)
         h.Fill(5)
         f.add_plottable(h, legend_title="some title")
+        f.add_plottable(None, legend_title="legend without plottable", markerstyle=20, color=20)
         c = f.draw_to_canvas()
         self.assertIsInstance(c.FindObject("plot"), TPad)
 
@@ -360,11 +365,12 @@ class Test_write_to_tex_file(unittest.TestCase):
 
 class Test_import_from_canvas(unittest.TestCase):
     def setUp(self):
-        fig = Figure()
+        self.orig_fig = Figure()
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
-        fig.add_plottable(h1, legend_title="hist 1")
-        self.canvas = fig.draw_to_canvas()
+        self.orig_fig.add_plottable(h1, legend_title="hist 1")
+        self.orig_fig.legend.title = "Legend title"
+        self.canvas = self.orig_fig.draw_to_canvas()
 
     def test_import_roofie_canvas(self):
         fig = Figure()
@@ -373,7 +379,67 @@ class Test_import_from_canvas(unittest.TestCase):
         self.assertIsInstance(fig._plottables[0], dict)
         fig.draw_to_canvas()
 
+        # make a pdf for visual comparison
+        latexdoc = Beamerdoc("Christian Bourjau", "Test plots")
+        sec = latexdoc.add_section("Import from canvas (same content, maybe different positions)")
+        sec.add_figure(self.orig_fig)
+        sec.add_figure(fig)
+        latexdoc.finalize_document("test_imports.tex")
+
     def test_import_non_roofie_canvas(self):
         fig = Figure()
         c = Canvas()
         self.assertRaises(ValueError, fig.import_plottables_from_canvas, c)
+
+
+class Test_beamify_add_canvas(unittest.TestCase):
+    def test_overwrite_canvas_before_finalize(self):
+        def add_canvas(sec):
+            """
+            Add a canvas to the section. The canvas and histogram
+            go out of scope at the end of the function.
+            """
+            c = Canvas()
+            h1 = Hist1D(10, 0, 10)
+            h1.Fill(5)
+            h1.Draw()
+            sec.add_figure(c)
+        latexdoc = Beamerdoc("Christian Bourjau", "Test plots")
+        sec = latexdoc.add_section("TCanvas")
+        add_canvas(sec)
+        sec = latexdoc.add_section("TCanvas and roofie")
+        add_canvas(sec)
+        fig = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        fig.add_plottable(h1, legend_title="hist 1")
+        sec.add_figure(fig)
+        latexdoc.finalize_document("test_add_canvas.tex")
+
+
+class Test_complicated_plot_for_visual_comparison(unittest.TestCase):
+    def test_busy_plot(self):
+        from ROOT import TF1
+        from rootpy.plotting import Hist1D
+        from roofie import Figure, Styles
+
+        h = Hist1D(30, -5, 5)
+        h.FillRandom('landau', 1000)
+
+        f = TF1("f", "100*exp(-0.5*((x)/2)**2)", -5, 5)
+
+        fig = Figure()
+        fig.style = Styles.Public_full
+        # Drawing the legend currently still screws up the y scale! :P
+        # This is why we love root...
+        fig.legend.title = "Functions"
+        fig.legend.position = 'tr'  # top right
+        fig.xtitle = "Mega X"
+        fig.ytitle = "Tera Y"
+
+        fig.add_plottable(h, legend_title="Landau")
+        fig.add_plottable(f, legend_title='Gaussian')
+
+        # add legend entry not associated with plottable
+        fig.add_plottable(None, legend_title='Unassociated legend', markerstyle='diamond', color='blue')
+        fig.save_to_file(path=".", name="busy_plot.pdf")

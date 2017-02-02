@@ -5,6 +5,7 @@ import os
 
 from rootpy import asrootpy, log
 from rootpy.plotting import Legend, Canvas, Pad, Graph
+from rootpy.plotting.base import Color, MarkerStyle
 from rootpy.plotting.utils import get_limits
 
 from .utils import _turn_on_style
@@ -193,7 +194,6 @@ class Figure(object):
 
             # Set the title to the given title (sledge hammer method)
             obj.title = self.title
-
             axes = obj.GetXaxis(), obj.GetYaxis()
             for axis in axes:
                 axis.SetLabelSize(self.style.axisLabelSize)
@@ -216,8 +216,8 @@ class Figure(object):
 
         Parameters
         ----------
-        obj : Hist1D, Graph
-            A root plottable object
+        obj : Hist1D, Graph, None
+            A root plottable object; If none, this object will only show up in the legend
         legend_title : string
             Title for this plottable as shown in the legend
         linestyle : int
@@ -226,7 +226,11 @@ class Figure(object):
             connection) by default, Graphs and functions have style 1
             (solid line).
         """
-        p = asrootpy(obj.Clone(gen_random_name()))
+        # Make a copy if we got a plottable
+        if obj is not None:
+            p = asrootpy(obj.Clone(gen_random_name()))
+        else:
+            p = ROOT.TLegendEntry()
         if isinstance(p, ROOT.TH1):
             p.SetDirectory(0)  # make sure that the hist is not associated with a file anymore!
         if not linestyle:
@@ -266,12 +270,21 @@ class Figure(object):
         else:
             legend_entries = [e for e in legend.GetListOfPrimitives()]
         # load the plottables but ignore the frame
-        plottables = [{'p': asrootpy(p)} for p in pad.GetListOfPrimitives() if (is_plottable(p) and
-                                                                                p.GetName() != "__frame")]
-        for pdict in plottables:
-            for legend_entry in legend_entries:
-                if pdict['p'] == legend_entry.GetObject():
-                    pdict['legend_title'] = legend_entry.GetLabel()
+        plottables = []
+        for p in pad.GetListOfPrimitives():
+            if is_plottable(p):
+                if p.GetName() != "__frame":
+                    plottables.append({'p': asrootpy(p.Clone(gen_random_name()))})
+                    for legend_entry in legend_entries:
+                        if p == legend_entry.GetObject():
+                            plottables[-1]['legend_title'] = legend_entry.GetLabel()
+                else:
+                    self.xtitle = p.GetXaxis().GetTitle()
+                    self.ytitle = p.GetYaxis().GetTitle()
+        # set legend title if any
+        if legend.GetHeader():
+            self.legend.title = legend.GetHeader()
+
         self._plottables += plottables
 
     def draw_to_canvas(self):
@@ -316,11 +329,12 @@ class Figure(object):
             ymin = self.plot.ymin
 
         if not all([val is not None for val in [xmin, xmax, ymin, ymax]]):
-            raise TypeError("unable to determine plot axes ranges from the given plottagles")
+            raise TypeError("unable to determine plot axes ranges from the given plottables")
 
         self._prepare_frame(xmin, xmax, ymin, ymax)
         self._theme_plottables()
         # Set ranges
+
         for i, pdic in enumerate(self._plottables):
             obj = pdic['p']
             xaxis = obj.GetXaxis()
@@ -350,7 +364,8 @@ class Figure(object):
             self._draw_legend(pad_legend)
         else:
             self._draw_legend(pad_plot)
-        pad_plot.Update()  # needed sometimes with import of canvas. maybe because other "plot" pads exist...
+        # needed sometimes with import of canvas. maybe because other "plot" pads exist...
+        pad_plot.Update()
         return c
 
     def delete_plottables(self):
@@ -406,23 +421,24 @@ class Figure(object):
             raise NotImplementedError("Only PDF export is implemented at the moment")
         # strip of tailing / if any
         # this is not compatible with windows, I guess!
-        if path.endswith('/'):
-            path = path[:-1]
+        path = path.rstrip('/')
         try:
             os.makedirs(path)
         except OSError:
             pass
 
-        # The order of the following is important! First, set paper size, then draw the canvas and then create the pdf
-        # Doin pdf.Range(10, 10) is not sufficient. it just does random shit
-        # Be careful to reset the global gStyle when we are finished. Yeah! Globals!
-        # Ok, Root does not like that either...
+        # The order of the following is important! First, set paper
+        # size, then draw the canvas and then create the pdf Doin
+        # pdf.Range(10, 10) is not sufficient. it just does random
+        # shit Be careful to reset the global gStyle when we are
+        # finished. Yeah! Globals!  Ok, Root does not like that
+        # either...
         # paper_width, paper_height = ROOT.Double(), ROOT.Double()
         # ROOT.gStyle.GetPaperSize(paper_width, paper_height)
         ROOT.gStyle.SetPaperSize(self.style.canvasWidth / self.style.pt_per_cm,
                                  self.style.canvasHeight / self.style.pt_per_cm,)
         c = self.draw_to_canvas()
-        c.Print("{}/{}".format(path, name))
+        c.Print("{0}/{1}".format(path, name))
 
         # reset the page size
         # ROOT.gStyle.SetPaperSize(paper_width, paper_height)
